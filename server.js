@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 5000;
 // ===== Middlewares =====
 app.use(cors({ origin: "*" })); // allow all for now
 app.use(express.json());
-// app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Debug middleware (log every request)
 app.use((req, res, next) => {
@@ -20,11 +20,11 @@ app.use((req, res, next) => {
 });
 
 // ===== Multer setup for image uploads =====
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => cb(null, "uploads/"),
-//   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
-// });
-// const upload = multer({ storage });
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
+});
+const upload = multer({ storage });
 
 // ===== In-Memory Storage (temporary for prototype) =====
 const users = []; // { id, name, email, phone, password, role }
