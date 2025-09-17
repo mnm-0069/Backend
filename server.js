@@ -9,11 +9,11 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ===== Middlewares =====
-app.use(cors({ origin: "*" })); // allow all for now
+app.use(cors({ origin: "*" })); 
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Debug middleware (log every request)
+// Debug middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
@@ -26,23 +26,19 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ===== In-Memory Storage (temporary for prototype) =====
-const users = []; // { id, name, email, phone, password, role }
-const issues = []; // { id, citizenId, description, location, imageUrl, status }
+// ===== In-Memory Storage =====
+const users = []; 
+const issues = []; 
 
 // ===== Routes =====
-
-// Health Check
 app.get("/", (req, res) => {
   res.json({ message: "CITYSYNC BACKEND SERVER RUNNING" });
-  res.send("Hello");
 });
 
 // ---------------- AUTH ROUTES ----------------
 app.post("/auth/register", async (req, res) => {
   try {
     const { name, email, phone, password, role } = req.body;
-
     if (!password || !role) {
       return res.status(400).json({ success: false, message: "Role & password required" });
     }
@@ -86,11 +82,7 @@ app.post("/auth/login", async (req, res) => {
 });
 
 // ---------------- ISSUE ROUTES ----------------
-app.get("/",(req,res) => {
-  res.status(400).send("Hello");
-})
-
-app.post("/issue", (req, res) => {      // backend-production-e436.up.railway.app
+app.post("/issue", upload.single("image"), (req, res) => {
   try {
     const { description, location, citizenId } = req.body;
 
@@ -104,7 +96,7 @@ app.post("/issue", (req, res) => {      // backend-production-e436.up.railway.ap
       citizenId,
       description,
       location,
-      // imageUrl: `/uploads/${req.file.filename}`,
+      imageUrl: `/uploads/${req.file.filename}`, // ✅ image now saved
       status: "pending",
     };
 
@@ -124,13 +116,10 @@ app.get("/issue", (req, res) => {
 app.patch("/issue/:id", (req, res) => {
   try {
     const issue = issues.find((i) => i.id === req.params.id);
-
     if (!issue) {
       return res.status(404).json({ success: false, message: "Issue not found" });
     }
-
     issue.status = req.body.status || issue.status;
-
     res.json({ success: true, issue });
   } catch (err) {
     console.error("Update Issue Error:", err);
