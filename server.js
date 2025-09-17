@@ -66,7 +66,8 @@ app.post("/auth/login", async (req, res) => {
 
 // Issue Routes
 app.post("/issue", (req, res) => {
-  const { description, location, citizenId } = req.body;
+  const payload = req.body;
+  console.log(payload);
   console.log(req.params);
   if (!req.file)
     return res
