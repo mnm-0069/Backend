@@ -102,5 +102,5 @@ app.patch("/issue/:id", (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Prototype backend running on http://localhost:${PORT}`);
+  console.log(`CITYSYNC SERVER INITIAL`);
 });
