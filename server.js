@@ -66,22 +66,23 @@ app.post("/auth/login", async (req, res) => {
 
 // Issue Routes
 app.post("/issue", (req, res) => {
-  console.log(req.body);
-  // console.log(req.params);
-  // if (!req.file)
-  //   return res
-  //     .status(400)
-  //     .json({ success: false, message: "Image is required" });
+  //, upload.single("image")
+  const { description, location, citizenId } = req.body;
+  if (!req.file)
+    return res
+      .status(400)
+      .json({ success: false, message: "Image is required" });
 
-  // const id = Date.now().toString();
-  // const newIssue = {
-  //   id,
-  //   citizenId,
-  //   description,
-  //   location,
-  //   status: "pending",
-  // };
-  // issues.push(newIssue);
+  const id = Date.now().toString();
+  const newIssue = {
+    id,
+    citizenId,
+    description,
+    location,
+    //imageUrl: `/uploads/${req.file.filename}`,
+    status: "pending",
+  };
+  issues.push(newIssue);
   res.json({ success: true, message: "Issue reported", issue: newIssue });
 });
 
