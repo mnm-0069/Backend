@@ -19,9 +19,19 @@ app.use((req, res, next) => {
   next();
 });
 
+const fs = require("fs");
+
+// Added Afterwards
+// Make sure "uploads" folder exists
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+
 // ===== Multer setup for image uploads =====
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
+  destination: (req, file, cb) => cb(null, uploadDir), // use the absolute path
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 const upload = multer({ storage });
