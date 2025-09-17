@@ -66,7 +66,6 @@ app.post("/auth/login", async (req, res) => {
 
 // Issue Routes
 app.post("/issue", (req, res) => {
-
   console.log(req.body);
   // console.log(req.params);
   // if (!req.file)
@@ -87,9 +86,9 @@ app.post("/issue", (req, res) => {
 });
 
 // Get all issues (for employee/admin)
-// app.get("/issue", (req, res) => {
-//   res.json({ success: true, issues });
-// });
+app.get("/issue", (req, res) => {
+  res.json({ success: true, issues });
+});
 
 // Update issue status
 app.patch("/issue/:id", (req, res) => {
