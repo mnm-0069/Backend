@@ -5,6 +5,7 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -19,7 +20,6 @@ app.use((req, res, next) => {
   next();
 });
 
-const fs = require("fs");
 
 // Added Afterwards
 // Make sure "uploads" folder exists
