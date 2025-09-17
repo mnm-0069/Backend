@@ -8,100 +8,137 @@ const jwt = require("jsonwebtoken");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// ===== Middlewares =====
+app.use(cors({ origin: "*" })); // allow all for now
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Multer setup for image uploads
+// Debug middleware (log every request)
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
+// ===== Multer setup for image uploads =====
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 const upload = multer({ storage });
 
-// ===== In-Memory Storage =====
+// ===== In-Memory Storage (temporary for prototype) =====
 const users = []; // { id, name, email, phone, password, role }
 const issues = []; // { id, citizenId, description, location, imageUrl, status }
 
 // ===== Routes =====
 
-// Test route
+// Health Check
 app.get("/", (req, res) => {
   res.json({ message: "CITYSYNC BACKEND SERVER RUNNING" });
+  res.send("Hello");
 });
 
-// Auth Routes
+// ---------------- AUTH ROUTES ----------------
 app.post("/auth/register", async (req, res) => {
-  const { name, email, phone, password, role } = req.body;
-  if (!password || !role)
-    return res
-      .status(400)
-      .json({ success: false, message: "Role & password required" });
+  try {
+    const { name, email, phone, password, role } = req.body;
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const id = Date.now().toString();
-  users.push({ id, name, email, phone, password: hashedPassword, role });
-  res.json({ success: true, message: "User registered", id });
+    if (!password || !role) {
+      return res.status(400).json({ success: false, message: "Role & password required" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const id = Date.now().toString();
+
+    users.push({ id, name, email, phone, password: hashedPassword, role });
+
+    res.json({ success: true, message: "User registered", id });
+  } catch (err) {
+    console.error("Register Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
 });
 
 app.post("/auth/login", async (req, res) => {
-  const { email, phone, password, role } = req.body;
-  const user = users.find(
-    (u) => (u.email === email || u.phone === phone) && u.role === role
-  );
-  if (!user)
-    return res.status(400).json({ success: false, message: "User not found" });
+  try {
+    const { email, phone, password, role } = req.body;
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch)
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid credentials" });
+    const user = users.find(
+      (u) => (u.email === email || u.phone === phone) && u.role === role
+    );
 
-  const token = jwt.sign({ id: user.id, role: user.role }, "prototype_secret", {
-    expiresIn: "7d",
-  });
-  res.json({ success: true, token, role: user.role });
+    if (!user) return res.status(400).json({ success: false, message: "User not found" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign({ id: user.id, role: user.role }, "prototype_secret", {
+      expiresIn: "7d",
+    });
+
+    res.json({ success: true, token, role: user.role });
+  } catch (err) {
+    console.error("Login Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
 });
 
-// Issue Routes
-app.post("/issue", (req, res) => {
-  //, upload.single("image")
-  const { description, location, citizenId } = req.body;
-  if (!req.file)
-    return res
-      .status(400)
-      .json({ success: false, message: "Image is required" });
+// ---------------- ISSUE ROUTES ----------------
+app.get("/",(req,res) => {
+  res.status(400).send("Hello");
+})
 
-  const id = Date.now().toString();
-  const newIssue = {
-    id,
-    citizenId,
-    description,
-    location,
-    //imageUrl: `/uploads/${req.file.filename}`,
-    status: "pending",
-  };
-  issues.push(newIssue);
-  res.json({ success: true, message: "Issue reported", issue: newIssue });
+app.post("/issue", upload.single("image"), (req, res) => {
+  try {
+    const { description, location, citizenId } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Image is required" });
+    }
+
+    const id = Date.now().toString();
+    const newIssue = {
+      id,
+      citizenId,
+      description,
+      location,
+      imageUrl: `/uploads/${req.file.filename}`,
+      status: "pending",
+    };
+
+    issues.push(newIssue);
+
+    res.json({ success: true, message: "Issue reported", issue: newIssue });
+  } catch (err) {
+    console.error("Issue Report Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
 });
 
-// Get all issues (for employee/admin)
 app.get("/issue", (req, res) => {
   res.json({ success: true, issues });
 });
 
-// Update issue status
 app.patch("/issue/:id", (req, res) => {
-  const issue = issues.find((i) => i.id === req.params.id);
-  if (!issue)
-    return res.status(404).json({ success: false, message: "Issue not found" });
+  try {
+    const issue = issues.find((i) => i.id === req.params.id);
 
-  issue.status = req.body.status || issue.status;
-  res.json({ success: true, issue });
+    if (!issue) {
+      return res.status(404).json({ success: false, message: "Issue not found" });
+    }
+
+    issue.status = req.body.status || issue.status;
+
+    res.json({ success: true, issue });
+  } catch (err) {
+    console.error("Update Issue Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
 });
 
-// Start server
+// ===== Start server =====
 app.listen(PORT, () => {
-  console.log(`CITYSYNC BACKEND SERVER RUNNING`);
+  console.log(`🚀 CITYSYNC BACKEND SERVER RUNNING on port ${PORT}`);
 });
