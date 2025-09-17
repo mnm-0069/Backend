@@ -104,7 +104,7 @@ app.post("/issue", upload.single("image"), (req, res) => {
       citizenId,
       description,
       location,
-      imageUrl: `/uploads/${req.file.filename}`,
+      // imageUrl: `/uploads/${req.file.filename}`,
       status: "pending",
     };
 
