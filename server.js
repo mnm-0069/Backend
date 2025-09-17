@@ -65,8 +65,9 @@ app.post("/auth/login", async (req, res) => {
 });
 
 // Issue Routes
-app.post("/issue", upload.single("image"), (req, res) => {
+app.post("/issue", (req, res) => {
   const { description, location, citizenId } = req.body;
+  console.log(req.params);
   if (!req.file)
     return res
       .status(400)
@@ -78,7 +79,6 @@ app.post("/issue", upload.single("image"), (req, res) => {
     citizenId,
     description,
     location,
-    imageUrl: `/uploads/${req.file.filename}`,
     status: "pending",
   };
   issues.push(newIssue);
