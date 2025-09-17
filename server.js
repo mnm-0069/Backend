@@ -87,9 +87,9 @@ app.post("/issue", (req, res) => {
 });
 
 // Get all issues (for employee/admin)
-app.get("/issue", (req, res) => {
-  res.json({ success: true, issues });
-});
+// app.get("/issue", (req, res) => {
+//   res.json({ success: true, issues });
+// });
 
 // Update issue status
 app.patch("/issue/:id", (req, res) => {
