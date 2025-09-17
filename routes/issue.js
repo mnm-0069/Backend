@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const Issue = require("../models/Issue");
+const path = require("path");
 
 // Multer config (store in uploads folder)
 const storage = multer.diskStorage({
@@ -10,19 +10,29 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// Temporary in-memory storage for issues
+let issues = [];
+
 // Citizen uploads issue
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", upload.single("image"), (req, res) => {
   try {
     const { description, location, citizenId } = req.body;
 
-    const newIssue = new Issue({
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Image is required" });
+    }
+
+    const newIssue = {
+      id: issues.length + 1,
       citizenId,
       description,
       location,
-      imageUrl: `/uploads/${req.file.filename}`
-    });
+      imageUrl: `/uploads/${req.file.filename}`,
+      status: "pending",
+      createdAt: new Date()
+    };
 
-    await newIssue.save();
+    issues.push(newIssue);
     res.json({ success: true, message: "Issue reported", issue: newIssue });
   } catch (err) {
     console.error(err);
@@ -31,9 +41,8 @@ router.post("/", upload.single("image"), async (req, res) => {
 });
 
 // Employee fetches all issues
-router.get("/", async (req, res) => {
+router.get("/", (req, res) => {
   try {
-    const issues = await Issue.find().populate("citizenId", "name email phone");
     res.json({ success: true, issues });
   } catch (err) {
     console.error(err);
@@ -42,10 +51,16 @@ router.get("/", async (req, res) => {
 });
 
 // Employee updates issue status
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", (req, res) => {
   try {
     const { status } = req.body;
-    const issue = await Issue.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const issue = issues.find(i => i.id === parseInt(req.params.id));
+
+    if (!issue) {
+      return res.status(404).json({ success: false, message: "Issue not found" });
+    }
+
+    issue.status = status || issue.status;
     res.json({ success: true, issue });
   } catch (err) {
     console.error(err);
