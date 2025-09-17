@@ -27,7 +27,7 @@ const issues = []; // { id, citizenId, description, location, imageUrl, status }
 
 // Test route
 app.get("/", (req, res) => {
-  res.json({ message: "Backend prototype is running 🚀" });
+  res.json({ message: "CITYSYNC BACKEND SERVER RUNNING" });
 });
 
 // Auth Routes
@@ -102,5 +102,5 @@ app.patch("/issue/:id", (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`CITYSYNC SERVER INITIAL`);
+  console.log(`CITYSYNC BACKEND SERVER RUNNING`);
 });
