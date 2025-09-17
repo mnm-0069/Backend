@@ -82,10 +82,13 @@ app.post("/auth/login", async (req, res) => {
 });
 
 // ---------------- ISSUE ROUTES ----------------
+// POST route to create a new issue
 app.post("/issue", upload.single("image"), (req, res) => {
   try {
-    const { description, location, citizenId } = req.body;
-    if (!req.file) return res.status(400).json({ success: false, message: "Image is required" });
+    const { description, location, citizenId, category } = req.body;
+
+    if (!req.file)
+      return res.status(400).json({ success: false, message: "Image is required" });
 
     const id = Date.now().toString();
     const newIssue = {
@@ -93,11 +96,13 @@ app.post("/issue", upload.single("image"), (req, res) => {
       citizenId,
       description,
       location,
+      category: category || "Other", // ✅ store category
       imageUrl: `/uploads/${req.file.filename}`,
       status: "pending",
     };
 
     issues.push(newIssue);
+
     res.json({ success: true, message: "Issue reported", issue: newIssue });
   } catch (err) {
     console.error("Issue Report Error:", err);
@@ -105,7 +110,20 @@ app.post("/issue", upload.single("image"), (req, res) => {
   }
 });
 
-app.get("/issue", (req, res) => res.json({ success: true, issues }));
+// GET route to fetch all issues
+app.get("/issue", (req, res) => {
+  const categoryFilter = req.query.category; // optional query parameter
+  let filteredIssues = issues;
+
+  if (categoryFilter) {
+    filteredIssues = issues.filter(
+      (issue) => issue.category === categoryFilter
+    );
+  }
+
+  res.json({ success: true, issues: filteredIssues });
+});
+
 
 // ---------------- GET ALL UPLOADED IMAGES IN JSON ----------------
 app.get("/uploads-json", (req, res) => {
@@ -122,6 +140,15 @@ app.get("/uploads-json", (req, res) => {
     res.json({ success: true, files: fileUrls });
   });
 });
+
+//--------------GET ISSUES CATEGORY WISE-------------------------
+app.get("/issues/category/:type", (req, res) => {
+  const type = req.params.type;
+  const filtered = issues.filter(i => i.category === type);
+
+  res.json({ success: true, issues: filtered });
+});
+
 
 app.patch("/issue/:id", (req, res) => {
   try {
