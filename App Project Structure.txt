@@ -1,0 +1,12 @@
+Backend/
+│── models/
+│   └── User.js
+│   └── Issue.js
+│── routes/
+│   └── auth.js
+│   └── issue.js
+│── uploads/
+│── .env
+│── server.js
+│── package.json
+│── README.md
