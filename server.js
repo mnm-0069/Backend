@@ -34,7 +34,11 @@ const upload = multer({ storage });
 // ===== In-Memory Storage =====
 const users = [];
 const issues = [];
-let employees = []; // store logged in employees temporarily
+//Default Employees
+let employees = [
+  { id: "1", email: "emp1@city.com", phone: "9876543210", password: "123456", department: "water" },
+  { id: "2", email: "emp2@city.com", phone: "9999999999", password: "abcd", department: "garbage" },
+];
 
 // ===== Routes =====
 app.get("/", (req, res) => {
@@ -83,26 +87,34 @@ app.post("/auth/login", async (req, res) => {
 });
 
 app.post("/employee/login", (req, res) => {
-  const { email, phone, password, department } = req.body;
+  try {
+    const { email, phone, password, department } = req.body;
 
-  if ((!email && !phone) || !password || !department) {
-    return res.status(400).json({ success: false, message: "All fields are required" });
+    if ((!email && !phone) || !password || !department) {
+      return res.status(400).json({ success: false, message: "All fields are required" });
+    }
+
+    // ✅ Find existing employee
+    const employee = employees.find(
+      (emp) =>
+        (emp.email === email || emp.phone === phone) &&
+        emp.password === password &&
+        emp.department === department
+    );
+
+    if (!employee) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+
+    res.json({
+      success: true,
+      message: "Employee login successful",
+      employee,
+    });
+  } catch (err) {
+    console.error("Employee Login Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-
-  //------------------EMPLOYEE LOGIN AND STROING ON SERVER-------------------------
-  // for now, we won't do real auth. Just create employee record
-  const id = Date.now().toString();
-  const newEmployee = {
-    id,
-    email,
-    phone,
-    department,
-    password, // ⚠️ don’t store plain passwords in production, hash them
-  };
-
-  employees.push(newEmployee);
-
-  res.json({ success: true, message: "Employee logged in", employee: newEmployee });
 });
 
 // ---------------- ISSUE ROUTES ----------------
