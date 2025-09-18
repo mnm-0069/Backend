@@ -211,7 +211,17 @@ app.patch("/issue/:id/assign", (req, res) => {
 
 
 // ---------------- GET EMPLOYEE'S ASSIGNED ISSUES ----------------
+app.get("/employee/:id/issues", (req, res) => {
+  try {
+    const { id } = req.params;
+    const employeeIssues = issues.filter((i) => i.assignedTo === id);
 
+    res.json({ success: true, issues: employeeIssues });
+  } catch (err) {
+    console.error("Employee Issues Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 //-------------UPDATING/SUBMITTING THE ISSUE BY EMPLOYEE-------------
 app.patch("/issue/:id", (req, res) => {
