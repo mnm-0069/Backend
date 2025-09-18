@@ -86,6 +86,7 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
+//------------EMPLOYEE LOGIN-------------------
 app.post("/employee/login", (req, res) => {
   try {
     const { email, phone, password, department } = req.body;
@@ -118,7 +119,6 @@ app.post("/employee/login", (req, res) => {
 });
 
 // ---------------- ISSUE ROUTES ----------------
-// POST route to create a new issue
 app.post("/issue", upload.single("image"), (req, res) => {
   try {
     const { description, location, citizenId, category } = req.body;
@@ -132,9 +132,11 @@ app.post("/issue", upload.single("image"), (req, res) => {
       citizenId,
       description,
       location,
-      category: category || "Other", // ✅ store category
+      category: category || "Other",
       imageUrl: `/uploads/${req.file.filename}`,
       status: "pending",
+      assigned: false,       // ✅ NEW FIELD
+      assignedTo: null,      // ✅ Employee ID (null by default)
     };
 
     issues.push(newIssue);
@@ -145,6 +147,7 @@ app.post("/issue", upload.single("image"), (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 // GET route to fetch all issues
 app.get("/issue", (req, res) => {
@@ -186,6 +189,31 @@ app.get("/issues/category/:type", (req, res) => {
 });
 
 
+// ---------------- ASSIGN ISSUE TO EMPLOYEE ----------------
+app.patch("/issue/:id/assign", (req, res) => {
+  try {
+    const { employeeId } = req.body;
+    const issue = issues.find((i) => i.id === req.params.id);
+
+    if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
+
+    if (!employeeId) return res.status(400).json({ success: false, message: "employeeId is required" });
+
+    issue.assigned = true;
+    issue.assignedTo = employeeId;
+
+    res.json({ success: true, message: "Issue assigned", issue });
+  } catch (err) {
+    console.error("Assign Issue Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
+// ---------------- GET EMPLOYEE'S ASSIGNED ISSUES ----------------
+
+
+//-------------UPDATING/SUBMITTING THE ISSUE BY EMPLOYEE-------------
 app.patch("/issue/:id", (req, res) => {
   try {
     const issue = issues.find((i) => i.id === req.params.id);
