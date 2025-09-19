@@ -66,28 +66,33 @@ app.post("/auth/register", async (req, res) => {
   }
 });
 
-app.post("/auth/login", async (req, res) => {
+app.post("/auth/login", (req, res) => {
   try {
-    const { email, phone, password, role } = req.body;
+    const { email, phone, password } = req.body;
 
-    const user = users.find(
-      (u) => (u.email === email || u.phone === phone) && u.role === role
-    );
-    if (!user) return res.status(400).json({ success: false, message: "User not found" });
+    // Find user by email or phone
+    const user = users.find((u) => u.email === email || u.phone === phone);
+    if (!user) {
+      return res.status(400).json({ success: false, message: "User not found" });
+    }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
+    // Check password (plain-text for now)
+    if (user.password !== password) {
+      return res.status(400).json({ success: false, message: "Invalid credentials" });
+    }
 
-    const token = jwt.sign({ id: user.id, role: user.role }, "prototype_secret", {
-      expiresIn: "7d",
+    // ✅ If successful
+    res.json({
+      success: true,
+      message: "Login successful",
+      user: { email: user.email, phone: user.phone },
     });
-
-    res.json({ success: true, token, role: user.role });
   } catch (err) {
     console.error("Login Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 //------------EMPLOYEE LOGIN-------------------
 app.post("/employee/login", (req, res) => {
