@@ -32,7 +32,10 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // ===== In-Memory Storage =====
-const users = [];
+const users = [ // default login users 
+  {email: "emp1@city.com", phone: "9876543210", password: "123456" },
+  {email: "emp2@city.com", phone: "9999999999", password: "abcd" },
+];
 const issues = [];
 //Default Employees
 let employees = [
