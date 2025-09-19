@@ -66,33 +66,28 @@ app.post("/auth/register", async (req, res) => {
   }
 });
 
-app.post("/auth/login", (req, res) => {
+app.post("/auth/login", async (req, res) => {
   try {
-    const { email, phone, password } = req.body;
+    const { email, phone, password} = req.body;
 
-    // Find user by email or phone
-    const user = users.find((u) => u.email === email || u.phone === phone);
-    if (!user) {
-      return res.status(400).json({ success: false, message: "User not found" });
-    }
+    const user = users.find(
+      (u) => (u.email === email || u.phone === phone)
+    );
+    if (!user) return res.status(400).json({ success: false, message: "User not found" });
 
-    // Check password (plain-text for now)
-    if (user.password !== password) {
-      return res.status(400).json({ success: false, message: "Invalid credentials" });
-    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
 
-    // ✅ If successful
-    res.json({
-      success: true,
-      message: "Login successful",
-      user: { email: user.email, phone: user.phone },
+    const token = jwt.sign({ id: user.id, role: user.role }, "prototype_secret", {
+      expiresIn: "7d",
     });
+
+    res.json({ success: true, token});
   } catch (err) {
     console.error("Login Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
 
 //------------EMPLOYEE LOGIN-------------------
 app.post("/employee/login", (req, res) => {
