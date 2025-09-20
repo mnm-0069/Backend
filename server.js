@@ -7,7 +7,7 @@ const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const mongoose = require("mongoose");
 
-mongoose.connect("mongodb+srv://rahimanmeet:manmeetrahi123@clustercitysync.7zsnxvi.mongodb.net/civicAppDB", {
+mongoose.connect("mongodb+srv://rahimanmeet:manmeetrahi123@clustercitysync.7zsnxvi.mongodb.net/ClusterCitySync", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
