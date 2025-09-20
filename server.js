@@ -97,8 +97,8 @@ app.post("/auth/register", async (req, res) => {
   try {
     const { name, email, phone, password, role, department } = req.body;
 
-    if (!email || !password || !role)
-      return res.status(400).json({ success: false, message: "Email, password & role are required" });
+    if (!phone || !password || !role)
+      return res.status(400).json({ success: false, message: "Phone, password & role are required" });
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
