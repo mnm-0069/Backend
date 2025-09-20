@@ -93,106 +93,79 @@ app.get("/", (req, res) => {
 });
 
 // ---------------- AUTH ROUTES ----------------
-app.post("/auth/register", async (req, res) => {
-  try {
-    const { name, email, phone, password, role, department } = req.body;
+// app.post("/auth/register", async (req, res) => {
+//   try {
+//     const { name, email, phone, password, role, department } = req.body;
 
-    if (!phone || !password || !role)
-      return res.status(400).json({ success: false, message: "Phone, password & role are required" });
+//     if (!phone || !password || !role)
+//       return res.status(400).json({ success: false, message: "Phone, password & role are required" });
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser)
-      return res.status(400).json({ success: false, message: "Email already registered" });
+//     // Check if user already exists
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser)
+//       return res.status(400).json({ success: false, message: "Email already registered" });
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+//     // Hash password
+//     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user object
-    const userData = { name, email, phone, password: hashedPassword, role };
-    if (role === "employee") userData.department = department || "general";
+//     // Create user object
+//     const userData = { name, email, phone, password: hashedPassword, role };
+//     if (role === "employee") userData.department = department || "general";
 
-    // Save to MongoDB
-    const newUser = await User.create(userData);
+//     // Save to MongoDB
+//     const newUser = await User.create(userData);
 
-    res.json({ success: true, message: `${role} registered`, user: newUser });
-  } catch (err) {
-    console.error("Register Error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
+//     res.json({ success: true, message: `${role} registered`, user: newUser });
+//   } catch (err) {
+//     console.error("Register Error:", err);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// });
 
 
 //--------------------CITIZEN LOGIN-------------------
-app.post("/auth/login", async (req, res) => {
+app.post("/auth/login-citizen", async (req, res) => {
   try {
     const { email, phone, password } = req.body;
 
-    // Find user by email or phone in MongoDB
-    const user = await User.findOne({
-      $or: [{ email }, { phone }]
-    });
+    const user = await User.findOne({ $or: [{ email }, { phone }], role: "citizen" });
+    if (!user) return res.status(400).json({ success: false, message: "User not found" });
 
-    if (!user) {
-      return res.status(400).json({ success: false, message: "User not found" });
-    }
-
-    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ success: false, message: "Invalid credentials" });
-    }
+    if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
 
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      "prototype_secret",
-      { expiresIn: "7d" }
-    );
-
-    res.json({
-      success: true,
-      token,
-      role: user.role,
-      name: user.name,
-      email: user.email
-    });
+    const token = jwt.sign({ id: user._id, role: user.role }, "prototype_secret", { expiresIn: "7d" });
+    res.json({ success: true, token, user });
   } catch (err) {
-    console.error("Login Error:", err);
+    console.error("Citizen Login Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
 
+
 //------------EMPLOYEE LOGIN-------------------
-app.post("/employee/login", async (req, res) => {
+app.post("/auth/login-employee", async (req, res) => {
   try {
     const { email, phone, password, department } = req.body;
 
-    if ((!email && !phone) || !password || !department) {
-      return res.status(400).json({ success: false, message: "All fields are required" });
-    }
+    const user = await User.findOne({ $or: [{ email }, { phone }], role: "employee" });
+    if (!user) return res.status(400).json({ success: false, message: "Employee not found" });
 
-    const employee = await Employee.findOne({
-      $or: [{ email }, { phone }],
-      password,
-      department
-    });
+    if (department && user.department !== department)
+      return res.status(400).json({ success: false, message: "Invalid department" });
 
-    if (!employee) {
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
-    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
 
-    res.json({
-      success: true,
-      message: "Employee login successful",
-      employee,
-    });
+    const token = jwt.sign({ id: user._id, role: user.role }, "prototype_secret", { expiresIn: "7d" });
+    res.json({ success: true, token, user });
   } catch (err) {
     console.error("Employee Login Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 // ---------------- ISSUE ROUTES ----------------
 app.post("/issue", upload.single("image"), async (req, res) => {
