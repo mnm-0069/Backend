@@ -34,7 +34,12 @@ const upload = multer({ storage });
 // ===== In-Memory Storage =====
 const users = [ // default login users 
   {email: "emp1@city.com", phone: "9876543210", password: "123456" },
-  {email: "emp2@city.com", phone: "9999999999", password: "abcd" },
+  {email: "vansh@gmail.com", phone: "vansh", password: "123456" },
+  {email: "manmeet@gmail.com", phone: "manmeet", password: "123456" },
+  {email: "sukhnoor@gmail.com", phone: "sukhnoor", password: "123456" },
+  {email: "kirat@gmail.com", phone: "kirat", password: "123456" },
+  {email: "paresh@gmail.com", phone: "paresh", password: "123456" },
+  {email: "navya@gmail.com", phone: "navya", password: "123456" }
 ];
 const issues = [];
 //Default Employees
