@@ -66,21 +66,23 @@ const seedData = async () => {
     }
 
     // ---- Seed Employees ----
-    const employeesData = [
-      { email: "emp1@city.com", phone: "9876543210", password: "123456", department: "water",role: "employee" },
-      { email: "emp2@city.com", phone: "1002", password: "123456", department: "electricity",role: "employee"  },
-      { email: "emp3@city.com", phone: "1003", password: "123456", department: "road",role: "employee"  },
-      { email: "emp4@city.com", phone: "1004", password: "123456", department: "sanitation",role: "employee"  },
-    ];
+const employeesData = [
+  { email: "emp1@city.com", phone: "9876543210", password: "123456", department: "water", role: "employee" },
+  { email: "emp2@city.com", phone: "1002", password: "123456", department: "electricity", role: "employee" },
+  { email: "emp3@city.com", phone: "1003", password: "123456", department: "road", role: "employee" },
+  { email: "emp4@city.com", phone: "1004", password: "123456", department: "sanitation", role: "employee" },
+];
 
-    for (let empData of employeesData) {
-      const existing = await Employee.findOne({ email: empData.email });
-      if (!existing) {
-        const emp = new Employee(empData); // plain password for now
-        await emp.save();
-        console.log("👷 Default Employee created:", emp.email);
-      }
-    }
+for (let empData of employeesData) {
+  const existing = await Employee.findOne({ email: empData.email });
+  if (!existing) {
+    const hashedPassword = await bcrypt.hash(empData.password, 10);
+    const emp = new Employee({ ...empData, password: hashedPassword });
+    await emp.save();
+    console.log("👷 Default Employee created:", emp.email);
+  }
+}
+
 
   } catch (err) {
     console.error("❌ Error seeding data:", err);
@@ -92,35 +94,41 @@ app.get("/", (req, res) => {
   res.json({ message: "CITYSYNC BACKEND SERVER RUNNING" });
 });
 
-// ---------------- AUTH ROUTES ----------------
-// app.post("/auth/register", async (req, res) => {
-//   try {
-//     const { name, email, phone, password, role, department } = req.body;
+//---------------- AUTH ROUTES ----------------
+app.post("/auth/register", async (req, res) => {
+  try {
+    const { name, email, phone, password, role, department } = req.body;
 
-//     if (!phone || !password || !role)
-//       return res.status(400).json({ success: false, message: "Phone, password & role are required" });
+    if (!phone || !password || !role)
+      return res.status(400).json({ success: false, message: "Phone, password & role are required" });
 
-//     // Check if user already exists
-//     const existingUser = await User.findOne({ email });
-//     if (existingUser)
-//       return res.status(400).json({ success: false, message: "Email already registered" });
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ success: false, message: "Email already registered" });
 
-//     // Hash password
-//     const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-//     // Create user object
-//     const userData = { name, email, phone, password: hashedPassword, role };
-//     if (role === "employee") userData.department = department || "general";
+    // Create user object
+    const userData = { name, email, phone, password: hashedPassword, role };
+    if (role === "employee") userData.department = department || "general"; // dept added especially for employee
 
-//     // Save to MongoDB
-//     const newUser = await User.create(userData);
+    // Save to MongoDB
 
-//     res.json({ success: true, message: `${role} registered`, user: newUser });
-//   } catch (err) {
-//     console.error("Register Error:", err);
-//     res.status(500).json({ success: false, message: "Server error" });
-//   }
-// });
+    if(role == "citizen"){
+      const newUser = await User.create(userData);
+    }
+    else if (role == "employee"){
+      const newUser = await Employee.create(userData);
+    }
+    
+    res.json({ success: true, message: `${role} registered`, user: newUser });
+  } catch (err) {
+    console.error("Register Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 
 //--------------------CITIZEN LOGIN-------------------
