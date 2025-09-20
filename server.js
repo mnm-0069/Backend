@@ -5,6 +5,15 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
+const mongoose = require("mongoose");
+
+mongoose.connect("mongodb+srv://rahimanmeet:manmeetrahi123@clustercitysync.7zsnxvi.mongodb.net/civicAppDB", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("✅ MongoDB Connected"))
+.catch(err => console.error("❌ MongoDB Connection Error:", err));
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,18 +43,14 @@ const upload = multer({ storage });
 // ===== In-Memory Storage =====
 const users = [ // default login users 
   {email: "emp1@city.com", phone: "9876543210", password: "123456" },
-  {email: "vansh@gmail.com", phone: "vansh", password: "123456" },
-  {email: "manmeet@gmail.com", phone: "manmeet", password: "123456" },
-  {email: "sukhnoor@gmail.com", phone: "sukhnoor", password: "123456" },
-  {email: "kirat@gmail.com", phone: "kirat", password: "123456" },
-  {email: "paresh@gmail.com", phone: "paresh", password: "123456" },
-  {email: "navya@gmail.com", phone: "navya", password: "123456" }
 ];
 const issues = [];
 //Default Employees
 let employees = [
-  { id: "1", email: "emp1@city.com", phone: "9876543210", password: "123456", department: "water" },
-  { id: "2", email: "emp2@city.com", phone: "9999999999", password: "abcd", department: "garbage" },
+  { id: "1", email: "emp1@city.com", phone: "1", password: "123456", department: "water" },
+  { id: "2", email: "emp1@city.com", phone: "2", password: "123456", department: "water" },
+  { id: "3", email: "emp1@city.com", phone: "3", password: "123456", department: "water" },
+  { id: "4", email: "emp1@city.com", phone: "4", password: "123456", department: "water" },
 ];
 
 // ===== Routes =====
