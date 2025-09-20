@@ -154,8 +154,8 @@ app.post("/auth/login-employee", async (req, res) => {
   try {
     const { email, phone, password, department } = req.body;
 
-    if (!password || (!email && !phone))
-      return res.status(400).json({ success: false, message: "Provide email or phone and password" });
+    if (!password || (!email && !phone) || !department)
+      return res.status(400).json({ success: false, message: "Provide email or phone , password and department" });
 
     // ✅ Query Employee collection, not User
     const employee = await Employee.findOne({ $or: [{ email }, { phone }] });
