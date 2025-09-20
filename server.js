@@ -67,10 +67,10 @@ const seedData = async () => {
 
     // ---- Seed Employees ----
     const employeesData = [
-      { email: "emp1@city.com", phone: "9876543210", password: "123456", department: "water" },
-      { email: "emp2@city.com", phone: "1002", password: "123456", department: "electricity" },
-      { email: "emp3@city.com", phone: "1003", password: "123456", department: "road" },
-      { email: "emp4@city.com", phone: "1004", password: "123456", department: "sanitation" },
+      { email: "emp1@city.com", phone: "9876543210", password: "123456", department: "water",role: "employee" },
+      { email: "emp2@city.com", phone: "1002", password: "123456", department: "electricity",role: "employee"  },
+      { email: "emp3@city.com", phone: "1003", password: "123456", department: "road",role: "employee"  },
+      { email: "emp4@city.com", phone: "1004", password: "123456", department: "sanitation",role: "employee"  },
     ];
 
     for (let empData of employeesData) {
@@ -157,23 +157,25 @@ app.post("/auth/login-employee", async (req, res) => {
     if (!password || (!email && !phone))
       return res.status(400).json({ success: false, message: "Provide email or phone and password" });
 
-    // Find by email OR phone
-    const user = await User.findOne({ $or: [{ email }, { phone }], role: "employee" });
-    if (!user) return res.status(400).json({ success: false, message: "Employee not found" });
+    // ✅ Query Employee collection, not User
+    const employee = await Employee.findOne({ $or: [{ email }, { phone }] });
+    if (!employee) return res.status(400).json({ success: false, message: "Employee not found" });
 
-    if (department && user.department !== department)
+    // ✅ Department check (case-insensitive)
+    if (department && employee.department.toLowerCase() !== department.toLowerCase())
       return res.status(400).json({ success: false, message: "Invalid department" });
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, employee.password);
     if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user._id, role: user.role }, "prototype_secret", { expiresIn: "7d" });
-    res.json({ success: true, token, user });
+    const token = jwt.sign({ id: employee._id, role: "employee" }, "prototype_secret", { expiresIn: "7d" });
+    res.json({ success: true, token, employee });
   } catch (err) {
     console.error("Employee Login Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 
 // ---------------- ISSUE ROUTES ----------------
