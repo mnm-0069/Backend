@@ -3,10 +3,12 @@ const mongoose = require("mongoose");
 const issueSchema = new mongoose.Schema({
   citizenId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   description: String,
-  imageUrl: String,
   location: String,
-  status: { type: String, enum: ["pending", "in-progress", "resolved"], default: "pending" },
-  createdAt: { type: Date, default: Date.now }
-});
+  category: { type: String, default: "Other" },
+  imageUrl: String,
+  status: { type: String, default: "pending" },
+  assigned: { type: Boolean, default: false },
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "Employee", default: null }
+}, { timestamps: true });
 
 module.exports = mongoose.model("Issue", issueSchema);

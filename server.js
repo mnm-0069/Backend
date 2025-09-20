@@ -8,12 +8,18 @@ const fs = require("fs");
 const mongoose = require("mongoose");
 require("dotenv").config();
 
+// ===== MongoDB Connection =====
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 })
 .then(() => console.log("✅ MongoDB connected"))
 .catch(err => console.error("❌ MongoDB connection error:", err));
+
+// ===== Models =====
+const User = require("./models/User");
+const Employee = require("./models/Employee");
+const Issue = require("./models/Issue");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -40,18 +46,46 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ===== In-Memory Storage =====
-const users = [ // default login users 
-  {email: "emp1@city.com", phone: "9876543210", password: "123456" },
-];
-const issues = [];
-//Default Employees
-let employees = [
-  { id: "1", email: "emp1@city.com", phone: "1", password: "123456", department: "water" },
-  { id: "2", email: "emp1@city.com", phone: "2", password: "123456", department: "water" },
-  { id: "3", email: "emp1@city.com", phone: "3", password: "123456", department: "water" },
-  { id: "4", email: "emp1@city.com", phone: "4", password: "123456", department: "water" },
-];
+// ========== SEED DEFAULT DATA ==========
+const seedData = async () => {
+  try {
+    // ---- Seed Citizen ----
+    const citizenEmail = "citizen1@city.com";
+    let citizen = await User.findOne({ email: citizenEmail });
+    if (!citizen) {
+      const hashedPassword = await bcrypt.hash("123456", 10);
+      citizen = new User({
+        name: "John",
+        email: citizenEmail,
+        phone: "9876543210",
+        password: hashedPassword,
+        role: "citizen",
+      });
+      await citizen.save();
+      console.log("👤 Default Citizen created:", citizen.email);
+    }
+
+    // ---- Seed Employees ----
+    const employeesData = [
+      { email: "emp1@city.com", phone: "9876543210", password: "123456", department: "water" },
+      { email: "emp2@city.com", phone: "1002", password: "123456", department: "electricity" },
+      { email: "emp3@city.com", phone: "1003", password: "123456", department: "road" },
+      { email: "emp4@city.com", phone: "1004", password: "123456", department: "sanitation" },
+    ];
+
+    for (let empData of employeesData) {
+      const existing = await Employee.findOne({ email: empData.email });
+      if (!existing) {
+        const emp = new Employee(empData); // plain password for now
+        await emp.save();
+        console.log("👷 Default Employee created:", emp.email);
+      }
+    }
+
+  } catch (err) {
+    console.error("❌ Error seeding data:", err);
+  }
+};
 
 // ===== Routes =====
 app.get("/", (req, res) => {
@@ -65,42 +99,63 @@ app.post("/auth/register", async (req, res) => {
     if (!password || !role)
       return res.status(400).json({ success: false, message: "Role & password required" });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const id = Date.now().toString();
+    const existing = await User.findOne({ email });
+    if (existing) return res.status(400).json({ success: false, message: "Email already exists" });
 
-    users.push({ id, name, email, phone, password: hashedPassword, role });
-    res.json({ success: true, message: "User registered", id });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ name, email, phone, password: hashedPassword, role });
+    await user.save();
+
+    res.json({ success: true, message: "User registered", id: user._id });
   } catch (err) {
     console.error("Register Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
+//--------------------CITIZEN LOGIN-------------------
 app.post("/auth/login", async (req, res) => {
   try {
-    const { email, phone, password} = req.body;
+    const { email, phone, password } = req.body;
 
-    const user = users.find(
-      (u) => (u.email === email || u.phone === phone)
-    );
-    if (!user) return res.status(400).json({ success: false, message: "User not found" });
-
-    const isMatch = password === user.password;
-    if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
-
-    const token = jwt.sign({ id: user.id, role: user.role }, "prototype_secret", {
-      expiresIn: "7d",
+    // Find user by email or phone in MongoDB
+    const user = await User.findOne({
+      $or: [{ email }, { phone }]
     });
 
-    res.json({ success: true, token});
+    if (!user) {
+      return res.status(400).json({ success: false, message: "User not found" });
+    }
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: "Invalid credentials" });
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      "prototype_secret",
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      success: true,
+      token,
+      role: user.role,
+      name: user.name,
+      email: user.email
+    });
   } catch (err) {
     console.error("Login Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
+
 //------------EMPLOYEE LOGIN-------------------
-app.post("/employee/login", (req, res) => {
+app.post("/employee/login", async (req, res) => {
   try {
     const { email, phone, password, department } = req.body;
 
@@ -108,13 +163,11 @@ app.post("/employee/login", (req, res) => {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
-    // ✅ Find existing employee
-    const employee = employees.find(
-      (emp) =>
-        (emp.email === email || emp.phone === phone) &&
-        emp.password === password &&
-        emp.department === department
-    );
+    const employee = await Employee.findOne({
+      $or: [{ email }, { phone }],
+      password,
+      department
+    });
 
     if (!employee) {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
@@ -132,27 +185,22 @@ app.post("/employee/login", (req, res) => {
 });
 
 // ---------------- ISSUE ROUTES ----------------
-app.post("/issue", upload.single("image"), (req, res) => {
+app.post("/issue", upload.single("image"), async (req, res) => {
   try {
     const { description, location, citizenId, category } = req.body;
 
     if (!req.file)
       return res.status(400).json({ success: false, message: "Image is required" });
 
-    const id = Date.now().toString();
-    const newIssue = {
-      id,
+    const newIssue = new Issue({
       citizenId,
       description,
       location,
       category: category || "Other",
       imageUrl: `/uploads/${req.file.filename}`,
-      status: "pending",
-      assigned: false,       // ✅ NEW FIELD
-      assignedTo: null,      // ✅ Employee ID (null by default)
-    };
+    });
 
-    issues.push(newIssue);
+    await newIssue.save();
 
     res.json({ success: true, message: "Issue reported", issue: newIssue });
   } catch (err) {
@@ -161,59 +209,35 @@ app.post("/issue", upload.single("image"), (req, res) => {
   }
 });
 
-
 // GET route to fetch all issues
-app.get("/issue", (req, res) => {
-  const categoryFilter = req.query.category; // optional query parameter
-  let filteredIssues = issues;
-
-  if (categoryFilter) {
-    filteredIssues = issues.filter(
-      (issue) => issue.category === categoryFilter
-    );
-  }
-
-  res.json({ success: true, issues: filteredIssues });
-});
-
-
-// ---------------- GET ALL UPLOADED IMAGES IN JSON ----------------
-app.get("/uploads-json", (req, res) => {
-  fs.readdir(uploadDir, (err, files) => {
-    if (err) {
-      console.error("Error reading uploads folder:", err);
-      return res.status(500).json({ success: false, message: "Server error" });
+app.get("/issue", async (req, res) => {
+  try {
+    const categoryFilter = req.query.category;
+    let issues;
+    if (categoryFilter) {
+      issues = await Issue.find({ category: categoryFilter });
+    } else {
+      issues = await Issue.find();
     }
-
-    const fileUrls = files.map(
-      (file) => `${req.protocol}://${req.get("host")}/uploads/${file}`
-    );
-
-    res.json({ success: true, files: fileUrls });
-  });
+    res.json({ success: true, issues });
+  } catch (err) {
+    console.error("Get Issues Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
 });
-
-//--------------GET ISSUES CATEGORY WISE-------------------------
-app.get("/issues/category/:type", (req, res) => {
-  const type = req.params.type;
-  const filtered = issues.filter(i => i.category === type);
-
-  res.json({ success: true, issues: filtered });
-});
-
 
 // ---------------- ASSIGN ISSUE TO EMPLOYEE ----------------
-app.patch("/issue/:id/assign", (req, res) => {
+app.patch("/issue/:id/assign", async (req, res) => {
   try {
     const { employeeId } = req.body;
-    const issue = issues.find((i) => i.id === req.params.id);
-
-    if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
-
     if (!employeeId) return res.status(400).json({ success: false, message: "employeeId is required" });
+
+    const issue = await Issue.findById(req.params.id);
+    if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
 
     issue.assigned = true;
     issue.assignedTo = employeeId;
+    await issue.save();
 
     res.json({ success: true, message: "Issue assigned", issue });
   } catch (err) {
@@ -222,13 +246,11 @@ app.patch("/issue/:id/assign", (req, res) => {
   }
 });
 
-
 // ---------------- GET EMPLOYEE'S ASSIGNED ISSUES ----------------
-app.get("/employee/:id/issues", (req, res) => {
+app.get("/employee/:id/issues", async (req, res) => {
   try {
     const { id } = req.params;
-    const employeeIssues = issues.filter((i) => i.assignedTo === id);
-
+    const employeeIssues = await Issue.find({ assignedTo: id });
     res.json({ success: true, issues: employeeIssues });
   } catch (err) {
     console.error("Employee Issues Error:", err);
@@ -236,21 +258,8 @@ app.get("/employee/:id/issues", (req, res) => {
   }
 });
 
-//-------------UPDATING/SUBMITTING THE ISSUE BY EMPLOYEE-------------
-app.patch("/issue/:id", (req, res) => {
-  try {
-    const issue = issues.find((i) => i.id === req.params.id);
-    if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
-
-    issue.status = req.body.status || issue.status;
-    res.json({ success: true, issue });
-  } catch (err) {
-    console.error("Update Issue Error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
 // ===== Start server =====
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 CITYSYNC BACKEND SERVER RUNNING on port ${PORT}`);
+  await seedData(); // 🔥 Seed defaults on startup
 });
