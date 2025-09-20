@@ -93,7 +93,7 @@ app.get("/", (req, res) => {
   res.json({ message: "CITYSYNC BACKEND SERVER RUNNING" });
 });
 
-//---------------- AUTH ROUTES ----------------
+//---------------- AUTH REGISTER ROUTES ----------------
 app.post("/auth/register", async (req, res) => {
   try {
     const { name, email, phone, password, role, department } = req.body;
@@ -179,24 +179,33 @@ app.post("/issue", upload.single("image"), async (req, res) => {
   try {
     const { description, location, citizenId, category } = req.body;
 
+    // Validate required fields
+    if (!description || !location || !citizenId)
+      return res.status(400).json({ success: false, message: "Description, location and citizenId are required" });
+
     if (!req.file)
       return res.status(400).json({ success: false, message: "Image is required" });
 
+    // Create new Issue document
     const newIssue = new Issue({
       citizenId,
       description,
       location,
       category: category || "Other",
-      imageUrl: `/uploads/${req.file.filename}`,
+      imageUrl: `/uploads/${req.file.filename}`, // store relative path
     });
 
+    // Save to MongoDB
     await newIssue.save();
-    res.json({ success: true, message: "Issue reported", issue: newIssue });
+
+    // Return success response
+    res.json({ success: true, message: "Issue reported successfully", issue: newIssue });
   } catch (err) {
     console.error("Issue Report Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 // GET all issues
 app.get("/issue", async (req, res) => {

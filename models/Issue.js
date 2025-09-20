@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const issueSchema = new mongoose.Schema({
-  citizenId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  citizenId: { type: mongoose.Schema.Types.ObjectId.name, ref: "User" },
   description: String,
   location: String,
   category: { type: String, default: "Other" },
