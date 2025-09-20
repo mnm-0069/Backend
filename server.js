@@ -128,6 +128,10 @@ app.post("/auth/login-citizen", async (req, res) => {
   try {
     const { email, phone, password } = req.body;
 
+    if (!password || (!email && !phone))
+      return res.status(400).json({ success: false, message: "Provide email or phone and password" });
+
+    // Find by email OR phone
     const user = await User.findOne({ $or: [{ email }, { phone }], role: "citizen" });
     if (!user) return res.status(400).json({ success: false, message: "User not found" });
 
@@ -144,11 +148,16 @@ app.post("/auth/login-citizen", async (req, res) => {
 
 
 
+
 //------------EMPLOYEE LOGIN-------------------
 app.post("/auth/login-employee", async (req, res) => {
   try {
     const { email, phone, password, department } = req.body;
 
+    if (!password || (!email && !phone))
+      return res.status(400).json({ success: false, message: "Provide email or phone and password" });
+
+    // Find by email OR phone
     const user = await User.findOne({ $or: [{ email }, { phone }], role: "employee" });
     if (!user) return res.status(400).json({ success: false, message: "Employee not found" });
 
