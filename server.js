@@ -95,23 +95,33 @@ app.get("/", (req, res) => {
 // ---------------- AUTH ROUTES ----------------
 app.post("/auth/register", async (req, res) => {
   try {
-    const { name, email, phone, password, role } = req.body;
-    if (!password || !role)
-      return res.status(400).json({ success: false, message: "Role & password required" });
+    const { name, email, phone, password, role, department } = req.body;
 
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ success: false, message: "Email already exists" });
+    if (!email || !password || !role)
+      return res.status(400).json({ success: false, message: "Email, password & role are required" });
 
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ success: false, message: "Email already registered" });
+
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ name, email, phone, password: hashedPassword, role });
-    await user.save();
 
-    res.json({ success: true, message: "User registered", id: user._id });
+    // Create user object
+    const userData = { name, email, phone, password: hashedPassword, role };
+    if (role === "employee") userData.department = department || "general";
+
+    // Save to MongoDB
+    const newUser = await User.create(userData);
+
+    res.json({ success: true, message: `${role} registered`, user: newUser });
   } catch (err) {
     console.error("Register Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 //--------------------CITIZEN LOGIN-------------------
 app.post("/auth/login", async (req, res) => {
