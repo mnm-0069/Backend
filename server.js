@@ -306,30 +306,42 @@ app.get("/issue", async (req, res) => {
 });
 
 // Assign issue to employee
-app.patch("/issue/:id/assign", async (req, res) => {
+app.patch("/employee/:employeeId/assign-issue/:issueId", async (req, res) => {
   try {
-    const { employeeId } = req.body;
-    if (!employeeId)
+    const { employeeId, issueId } = req.params;
+
+    // 1️⃣ Find Employee
+    const employee = await Employee.findById(employeeId);
+    if (!employee)
+      return res.status(404).json({ success: false, message: "Employee not found" });
+
+    // 2️⃣ Check if issue is already assigned
+    if (employee.assignedIssues.includes(issueId)) {
       return res
         .status(400)
-        .json({ success: false, message: "employeeId is required" });
+        .json({ success: false, message: "Issue already assigned to this employee" });
+    }
 
-    const issue = await Issue.findById(req.params.id);
+    // 3️⃣ Add issueId to employee's assignedIssues array
+    employee.assignedIssues.push(issueId);
+    await employee.save();
+
+    // 4️⃣ Update Issue collection
+    const issue = await Issue.findById(issueId);
     if (!issue)
-      return res
-        .status(404)
-        .json({ success: false, message: "Issue not found" });
+      return res.status(404).json({ success: false, message: "Issue not found" });
 
     issue.assigned = true;
     issue.assignedTo = employeeId;
     await issue.save();
 
-    res.json({ success: true, message: "Issue assigned", issue });
+    res.json({ success: true, message: "Issue assigned successfully", employee });
   } catch (err) {
     console.error("Assign Issue Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 // Employee assigned issues
 app.get("/employee/:id/issues", async (req, res) => {
