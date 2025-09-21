@@ -160,6 +160,9 @@ app.post("/auth/login-employee", async (req, res) => {
     const employee = await Employee.findOne({ $or: [{ email }, { phone }] });
     if (!employee) return res.status(400).json({ success: false, message: "Employee not found" });
 
+    if (department && employee.department.toLowerCase() !== department.toLowerCase())
+      return res.status(400).json({ success: false, message: "Invalid department" });
+
     const isMatch = await bcrypt.compare(password, employee.password);
     if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
 
