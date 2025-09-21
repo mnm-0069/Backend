@@ -96,19 +96,21 @@ app.post("/auth/register", async (req, res) => {
   try {
     const { name, email, phone, password, role, department } = req.body;
 
-    if (!name ||(!phone && !email) || !password || !role)
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Phone, password & role are required",
-        });
+    if (!name || (!phone && !email) || !password || !role)
+      return res.status(400).json({
+        success: false,
+        message: "Phone, password & role are required",
+      });
 
     let existingUser = null;
     if (role === "citizen") {
-      existingUser = await User.findOne({ phone });
+      existingUser = await User.findOne({
+        $or: [{ phone: phone || null }, { email: email || null }],
+      });
     } else if (role === "employee") {
-      existingUser = await Employee.findOne({ phone });
+      existingUser = await Employee.findOne({
+        $or: [{ phone: phone || null }, { email: email || null }],
+      });
     }
 
     if (existingUser)
@@ -117,7 +119,7 @@ app.post("/auth/register", async (req, res) => {
         .json({ success: false, message: "Phone or Email already registered" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userData = { name, email, phone, password: hashedPassword, role };
+    const userData = { name, email : email || null, phone : phone || null, password: hashedPassword, role };
     if (role === "employee") userData.department = department || "general";
 
     let newUser;
@@ -139,12 +141,10 @@ app.post("/auth/login-citizen", async (req, res) => {
   try {
     const { email, phone, password } = req.body;
     if (!password || (!email && !phone))
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Provide email or phone and password",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Provide email or phone and password",
+      });
 
     const user = await User.findOne({
       $or: [{ email }, { phone }],
@@ -188,12 +188,10 @@ app.post("/auth/login-employee", async (req, res) => {
   try {
     const { email, phone, password, department } = req.body;
     if (!password || (!email && !phone) || !department)
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Provide email or phone, password and department",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Provide email or phone, password and department",
+      });
 
     const employee = await Employee.findOne({ $or: [{ email }, { phone }] });
     if (!employee)
@@ -230,7 +228,8 @@ app.post("/auth/login-employee", async (req, res) => {
 // ---------------- ISSUE ROUTES ----------------
 app.post("/issue", upload.single("image"), async (req, res) => {
   try {
-    const { description, location, citizenId, citizenName, category } = req.body;
+    const { description, location, citizenId, citizenName, category } =
+      req.body;
 
     if (!req.file)
       return res
@@ -246,8 +245,8 @@ app.post("/issue", upload.single("image"), async (req, res) => {
     }
 
     const newIssue = new Issue({
-      citizenId: citizen._id,        // ✅ actual ID
-      citizenName: citizen.name,      // ✅ storing name
+      citizenId: citizen._id, // ✅ actual ID
+      citizenName: citizen.name, // ✅ storing name
       description,
       location,
       category: category || "Other",
@@ -261,7 +260,6 @@ app.post("/issue", upload.single("image"), async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
 
 // GET all issues
 app.get("/issue", async (req, res) => {
