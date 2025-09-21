@@ -232,8 +232,6 @@ app.post("/auth/login-citizen", async (req, res) => {
 });
 
 
-
-
 //------------EMPLOYEE LOGIN-------------------
 app.post("/auth/login-employee", async (req, res) => {
   try {
@@ -247,19 +245,15 @@ app.post("/auth/login-employee", async (req, res) => {
       });
     }
 
-    // ✅ Find employee by email or phone
-    const employee = await Employee.findOne({
-      $or: [
-        { email: email ? email.toLowerCase().trim() : null },
-        { phone: phone ? phone.trim() : null },
-      ],
-    });
+    // ✅ Build dynamic query
+    const query = [];
+    if (email) query.push({ email: email.toLowerCase().trim() });
+    if (phone) query.push({ phone: phone.trim() });
 
+    // ✅ Find employee by email or phone
+    const employee = await Employee.findOne({ $or: query });
     if (!employee) {
-      return res.status(400).json({
-        success: false,
-        message: "Employee not found",
-      });
+      return res.status(400).json({ success: false, message: "Employee not found" });
     }
 
     // ✅ Check department
@@ -267,19 +261,13 @@ app.post("/auth/login-employee", async (req, res) => {
       department &&
       employee.department.toLowerCase() !== department.toLowerCase()
     ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid department",
-      });
+      return res.status(400).json({ success: false, message: "Invalid department" });
     }
 
     // ✅ Check password
     const isMatch = await bcrypt.compare(password, employee.password);
     if (!isMatch) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid credentials",
-      });
+      return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
 
     // ✅ Success response
@@ -299,6 +287,8 @@ app.post("/auth/login-employee", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
+
 
 
 // ---------------- ISSUE ROUTES ----------------
