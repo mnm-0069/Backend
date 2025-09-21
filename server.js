@@ -230,15 +230,15 @@ app.post("/auth/login-employee", async (req, res) => {
 // ---------------- ISSUE ROUTES ----------------
 app.post("/issue", upload.single("image"), async (req, res) => {
   try {
-    const { description, location, citizenName, category } = req.body;
+    const { description, location, citizenId, citizenName, category } = req.body;
 
     if (!req.file)
       return res
         .status(400)
         .json({ success: false, message: "Image is required" });
 
-    // find citizen
-    const citizen = await User.findById(citizenName);
+    // ✅ Find citizen by ID, not name
+    const citizen = await User.findById(citizenId);
     if (!citizen) {
       return res
         .status(404)
@@ -246,8 +246,8 @@ app.post("/issue", upload.single("image"), async (req, res) => {
     }
 
     const newIssue = new Issue({
-      citizenId,
-      citizenName: citizen.name, // <-- storing name here
+      citizenId: citizen._id,        // ✅ actual ID
+      citizenName: citizen.name,      // ✅ storing name
       description,
       location,
       category: category || "Other",
@@ -261,6 +261,7 @@ app.post("/issue", upload.single("image"), async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 // GET all issues
 app.get("/issue", async (req, res) => {
