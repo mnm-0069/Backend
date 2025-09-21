@@ -178,32 +178,41 @@ app.post("/auth/register", async (req, res) => {
 app.post("/auth/login-citizen", async (req, res) => {
   try {
     const { email, phone, password } = req.body;
-    if (!password || (!email && !phone))
+
+    // ✅ Validation
+    if ((!email && !phone) || !password) {
       return res.status(400).json({
         success: false,
         message: "Provide email or phone and password",
       });
+    }
 
+    // ✅ Find user by email or phone
     const user = await User.findOne({
-      $or: [{ email }, { phone }],
+      $or: [
+        { email: email ? email.toLowerCase().trim() : null },
+        { phone: phone ? phone.trim() : null },
+      ],
       role: "citizen",
     });
-    if (!user)
-      return res
-        .status(400)
-        .json({ success: false, message: "User not found" });
 
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // ✅ Check password
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid credentials" });
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
 
-    const token = jwt.sign(
-      { id: user._id, role: "citizen" },
-      "prototype_secret",
-      { expiresIn: "7d" }
-    );
+    // ✅ Success response
     res.json({
       success: true,
       message: "Login successful",
@@ -213,7 +222,6 @@ app.post("/auth/login-citizen", async (req, res) => {
         email: user.email,
         phone: user.phone,
       },
-      token, // if you’re using JWT
     });
   } catch (err) {
     console.error("Citizen Login Error:", err);
@@ -221,47 +229,74 @@ app.post("/auth/login-citizen", async (req, res) => {
   }
 });
 
+
+
 //------------EMPLOYEE LOGIN-------------------
 app.post("/auth/login-employee", async (req, res) => {
   try {
     const { email, phone, password, department } = req.body;
-    if (!password || (!email && !phone) || !department)
+
+    // ✅ Validation
+    if ((!email && !phone) || !password || !department) {
       return res.status(400).json({
         success: false,
-        message: "Provide email or phone, password and department",
+        message: "Provide email or phone, password, and department",
       });
+    }
 
-    const employee = await Employee.findOne({ $or: [{ email }, { phone }] });
-    if (!employee)
-      return res
-        .status(400)
-        .json({ success: false, message: "Employee not found" });
+    // ✅ Find employee by email or phone
+    const employee = await Employee.findOne({
+      $or: [
+        { email: email ? email.toLowerCase().trim() : null },
+        { phone: phone ? phone.trim() : null },
+      ],
+    });
 
+    if (!employee) {
+      return res.status(400).json({
+        success: false,
+        message: "Employee not found",
+      });
+    }
+
+    // ✅ Check department
     if (
       department &&
       employee.department.toLowerCase() !== department.toLowerCase()
-    )
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid department" });
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid department",
+      });
+    }
 
+    // ✅ Check password
     const isMatch = await bcrypt.compare(password, employee.password);
-    if (!isMatch)
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid credentials" });
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
 
-    const token = jwt.sign(
-      { id: employee._id, role: "employee" },
-      "prototype_secret",
-      { expiresIn: "7d" }
-    );
-    res.json({ success: true, token, employee });
+    // ✅ Success response
+    res.json({
+      success: true,
+      message: "Login successful",
+      employee: {
+        id: employee._id,
+        name: employee.name,
+        email: employee.email,
+        phone: employee.phone,
+        department: employee.department,
+      },
+    });
   } catch (err) {
     console.error("Employee Login Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 // ---------------- ISSUE ROUTES ----------------
 app.post("/issue", upload.single("image"), async (req, res) => {
