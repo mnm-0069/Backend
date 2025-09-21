@@ -96,23 +96,31 @@ app.post("/auth/register", async (req, res) => {
   try {
     const { name, email, phone, password, role, department } = req.body;
 
-    if (!name || (!phone && !email) || !password || !role) {
+    // ✅ Basic validation
+    if (!name || !password || !role) {
       return res.status(400).json({
         success: false,
-        message: "Name, password, role and either phone or email are required",
+        message: "Name, password and role are required",
       });
     }
 
-    // ✅ Duplicate check
-    let existingUser;
+    if (!phone && !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Either phone or email is required",
+      });
+    }
+
+    // ✅ Build OR query dynamically for duplicate check
     const orQuery = [];
     if (phone) orQuery.push({ phone });
     if (email) orQuery.push({ email });
 
+    let existingUser = null;
     if (role === "citizen") {
-      existingUser = await User.findOne({ $or: orQuery });
+      if (orQuery.length) existingUser = await User.findOne({ $or: orQuery });
     } else if (role === "employee") {
-      existingUser = await Employee.findOne({ $or: orQuery });
+      if (orQuery.length) existingUser = await Employee.findOne({ $or: orQuery });
     }
 
     if (existingUser) {
@@ -125,16 +133,13 @@ app.post("/auth/register", async (req, res) => {
     // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Prepare userData (don’t insert nulls)
-    const userData = {
-      name,
-      password: hashedPassword,
-      role,
-    };
+    // ✅ Prepare userData
+    const userData = { name, password: hashedPassword, role };
     if (phone) userData.phone = phone;
     if (email) userData.email = email;
     if (role === "employee") userData.department = department || "general";
 
+    // ✅ Save user
     let newUser;
     if (role === "citizen") {
       newUser = await User.create(userData);
@@ -150,6 +155,7 @@ app.post("/auth/register", async (req, res) => {
   } catch (err) {
     console.error("Register Error:", err);
 
+    // Handle unique index error
     if (err.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -160,6 +166,7 @@ app.post("/auth/register", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 
 
