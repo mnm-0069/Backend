@@ -96,7 +96,7 @@ app.post("/auth/register", async (req, res) => {
   try {
     const { name, email, phone, password, role, department } = req.body;
 
-    if (!phone || !password || !role)
+    if (!name ||(!phone && !email) || !password || !role)
       return res
         .status(400)
         .json({
@@ -114,7 +114,7 @@ app.post("/auth/register", async (req, res) => {
     if (existingUser)
       return res
         .status(400)
-        .json({ success: false, message: "Email already registered" });
+        .json({ success: false, message: "Phone or Email already registered" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const userData = { name, email, phone, password: hashedPassword, role };
