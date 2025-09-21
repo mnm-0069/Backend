@@ -102,21 +102,7 @@ app.post("/auth/register", async (req, res) => {
         message: "Phone, password & role are required",
       });
 
-    let existingUser = null;
-    if (role === "citizen") {
-      existingUser = await User.findOne({
-        $or: [{ phone: phone || null }, { email: email || null }],
-      });
-    } else if (role === "employee") {
-      existingUser = await Employee.findOne({
-        $or: [{ phone: phone || null }, { email: email || null }],
-      });
-    }
-
-    if (existingUser)
-      return res
-        .status(400)
-        .json({ success: false, message: "Phone or Email already registered" });
+    
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const userData = { name, email : email || null, phone : phone || null, password: hashedPassword, role };
