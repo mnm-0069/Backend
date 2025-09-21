@@ -9,7 +9,7 @@ const issueSchema = new mongoose.Schema({
   imageUrl: String,
   status: { type: String, default: "pending" },
   assigned: { type: Boolean, default: false },
-  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "Employee", default: null }
+  assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "Employee"}]
 }, { timestamps: true });
 
 module.exports = mongoose.model("Issue", issueSchema);
