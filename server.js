@@ -96,7 +96,6 @@ app.post("/auth/register", async (req, res) => {
   try {
     const { name, email, phone, password, role, department } = req.body;
 
-    // ✅ Validation
     if (!name || (!phone && !email) || !password || !role) {
       return res.status(400).json({
         success: false,
@@ -104,22 +103,16 @@ app.post("/auth/register", async (req, res) => {
       });
     }
 
-    // ✅ Build query to check duplicates
+    // ✅ Duplicate check
     let existingUser;
+    const orQuery = [];
+    if (phone) orQuery.push({ phone });
+    if (email) orQuery.push({ email });
+
     if (role === "citizen") {
-      existingUser = await User.findOne({
-        $or: [
-          ...(phone ? [{ phone }] : []),
-          ...(email ? [{ email }] : []),
-        ],
-      });
+      existingUser = await User.findOne({ $or: orQuery });
     } else if (role === "employee") {
-      existingUser = await Employee.findOne({
-        $or: [
-          ...(phone ? [{ phone }] : []),
-          ...(email ? [{ email }] : []),
-        ],
-      });
+      existingUser = await Employee.findOne({ $or: orQuery });
     }
 
     if (existingUser) {
@@ -132,7 +125,7 @@ app.post("/auth/register", async (req, res) => {
     // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Build userData dynamically (no nulls)
+    // ✅ Prepare userData (don’t insert nulls)
     const userData = {
       name,
       password: hashedPassword,
@@ -142,7 +135,6 @@ app.post("/auth/register", async (req, res) => {
     if (email) userData.email = email;
     if (role === "employee") userData.department = department || "general";
 
-    // ✅ Save user
     let newUser;
     if (role === "citizen") {
       newUser = await User.create(userData);
@@ -168,6 +160,7 @@ app.post("/auth/register", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 
 
