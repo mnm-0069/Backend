@@ -172,8 +172,6 @@ app.post("/auth/register", async (req, res) => {
   }
 });
 
-
-
 //--------------------CITIZEN LOGIN-------------------
 app.post("/auth/login-citizen", async (req, res) => {
   try {
@@ -231,7 +229,6 @@ app.post("/auth/login-citizen", async (req, res) => {
   }
 });
 
-
 //------------EMPLOYEE LOGIN-------------------
 app.post("/auth/login-employee", async (req, res) => {
   try {
@@ -253,7 +250,9 @@ app.post("/auth/login-employee", async (req, res) => {
     // ✅ Find employee by email or phone
     const employee = await Employee.findOne({ $or: query });
     if (!employee) {
-      return res.status(400).json({ success: false, message: "Employee not found" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Employee not found" });
     }
 
     // ✅ Check department
@@ -261,13 +260,17 @@ app.post("/auth/login-employee", async (req, res) => {
       department &&
       employee.department.toLowerCase() !== department.toLowerCase()
     ) {
-      return res.status(400).json({ success: false, message: "Invalid department" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid department" });
     }
 
     // ✅ Check password
     const isMatch = await bcrypt.compare(password, employee.password);
     if (!isMatch) {
-      return res.status(400).json({ success: false, message: "Invalid credentials" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid credentials" });
     }
 
     // ✅ Success response
@@ -287,9 +290,6 @@ app.post("/auth/login-employee", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
-
-
 
 // ---------------- ISSUE ROUTES ----------------
 app.post("/issue", upload.single("image"), async (req, res) => {
@@ -349,13 +349,18 @@ app.patch("/employee/:employeeId/assign-issue/:issueId", async (req, res) => {
     // 1️⃣ Find Employee
     const employee = await Employee.findById(employeeId);
     if (!employee)
-      return res.status(404).json({ success: false, message: "Employee not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Employee not found" });
 
     // 2️⃣ Check if issue is already assigned
     if (employee.assignedIssues.includes(issueId)) {
       return res
         .status(400)
-        .json({ success: false, message: "Issue already assigned to this employee" });
+        .json({
+          success: false,
+          message: "Issue already assigned to this employee",
+        });
     }
 
     // 3️⃣ Add issueId to employee's assignedIssues array
@@ -365,31 +370,46 @@ app.patch("/employee/:employeeId/assign-issue/:issueId", async (req, res) => {
     // 4️⃣ Update Issue collection
     const issue = await Issue.findById(issueId);
     if (!issue)
-      return res.status(404).json({ success: false, message: "Issue not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Issue not found" });
 
     issue.assigned = true;
     issue.assignedTo = employeeId;
     await issue.save();
 
-    res.json({ success: true, message: "Issue assigned successfully", employee });
+    res.json({
+      success: true,
+      message: "Issue assigned successfully",
+      employee: {
+        id: employee._id,
+        name: employee.name,
+        email: employee.email,
+        assignedIssues: employee.assignedIssues,
+      },
+    });
   } catch (err) {
     console.error("Assign Issue Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-
-// Employee assigned issues
-app.get("/employee/:id/issues", async (req, res) => {
+// Get all assigned issues for an employee
+app.get("/employee/:employeeId/assigned-issues", async (req, res) => {
   try {
-    const { id } = req.params;
-    const employeeIssues = await Issue.find({ assignedTo: id });
-    res.json({ success: true, issues: employeeIssues });
+    const { employeeId } = req.params;
+
+    const employee = await Employee.findById(employeeId).populate("assignedIssues");
+    if (!employee)
+      return res.status(404).json({ success: false, message: "Employee not found" });
+
+    res.json({ success: true, assignedIssues: employee.assignedIssues });
   } catch (err) {
-    console.error("Employee Issues Error:", err);
+    console.error("Fetch Assigned Issues Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 // ===== Start server =====
 app.listen(PORT, async () => {
