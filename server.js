@@ -96,18 +96,50 @@ app.post("/auth/register", async (req, res) => {
   try {
     const { name, email, phone, password, role, department } = req.body;
 
-    if (!name || (!phone && !email) || !password || !role)
+    // ✅ Validation
+    if (!name || (!phone && !email) || !password || !role) {
       return res.status(400).json({
         success: false,
-        message: "Phone, password & role are required",
+        message: "Name, password, role and either phone or email are required",
       });
+    }
 
-    
+    // ✅ Build dynamic query for duplicate check
+    const query = {};
+    if (phone) query.phone = phone;
+    if (email) query.email = email;
 
+    let existingUser;
+    if (role === "citizen") {
+      existingUser = await User.findOne(query);
+    } else if (role === "employee") {
+      existingUser = await Employee.findOne(query);
+    }
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone or Email already registered",
+      });
+    }
+
+    // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userData = { name, email : email || null, phone : phone || null, password: hashedPassword, role };
-    if (role === "employee") userData.department = department || "general";
 
+    // ✅ Prepare user data
+    const userData = {
+      name,
+      email: email || null,
+      phone: phone || null,
+      password: hashedPassword,
+      role,
+    };
+
+    if (role === "employee") {
+      userData.department = department || "general";
+    }
+
+    // ✅ Save to correct collection
     let newUser;
     if (role === "citizen") {
       newUser = await User.create(userData);
@@ -115,12 +147,26 @@ app.post("/auth/register", async (req, res) => {
       newUser = await Employee.create(userData);
     }
 
-    res.json({ success: true, message: `${role} registered`, user: newUser });
+    res.status(201).json({
+      success: true,
+      message: `${role} registered successfully`,
+      user: newUser,
+    });
   } catch (err) {
     console.error("Register Error:", err);
+
+    // Handle duplicate key error cleanly
+    if (err.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone or Email already registered",
+      });
+    }
+
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 //--------------------CITIZEN LOGIN-------------------
 app.post("/auth/login-citizen", async (req, res) => {
