@@ -9,12 +9,13 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 
 // ===== MongoDB Connection =====
-mongoose.connect(process.env.MONGO_URI, {
+mongoose
+  .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-})
-.then(() => console.log("✅ MongoDB connected"))
-.catch(err => console.error("❌ MongoDB connection error:", err));
+  })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // ===== Models =====
 const User = require("./models/User");
@@ -76,11 +77,10 @@ const seedData = async () => {
 
     const existingEmp = await Employee.findOne({ email: employeeData.email });
     if (!existingEmp) {
-      const emp = new Employee({ ...employeeData});
+      const emp = new Employee({ ...employeeData });
       await emp.save();
       console.log("👷 Default Employee created:", emp.name);
     }
-
   } catch (err) {
     console.error("❌ Error seeding data:", err);
   }
@@ -97,17 +97,24 @@ app.post("/auth/register", async (req, res) => {
     const { name, email, phone, password, role, department } = req.body;
 
     if (!phone || !password || !role)
-      return res.status(400).json({ success: false, message: "Phone, password & role are required" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Phone, password & role are required",
+        });
 
     let existingUser = null;
     if (role === "citizen") {
-      existingUser = await User.findOne({ email });
+      existingUser = await User.findOne({ phone });
     } else if (role === "employee") {
-      existingUser = await Employee.findOne({ email });
+      existingUser = await Employee.findOne({ phone });
     }
 
     if (existingUser)
-      return res.status(400).json({ success: false, message: "Email already registered" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already registered" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const userData = { name, email, phone, password: hashedPassword, role };
@@ -132,16 +139,44 @@ app.post("/auth/login-citizen", async (req, res) => {
   try {
     const { email, phone, password } = req.body;
     if (!password || (!email && !phone))
-      return res.status(400).json({ success: false, message: "Provide email or phone and password" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Provide email or phone and password",
+        });
 
-    const user = await User.findOne({ $or: [{ email }, { phone }], role: "citizen" });
-    if (!user) return res.status(400).json({ success: false, message: "User not found" });
+    const user = await User.findOne({
+      $or: [{ email }, { phone }],
+      role: "citizen",
+    });
+    if (!user)
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
+    if (!isMatch)
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user._id, role: "citizen" }, "prototype_secret", { expiresIn: "7d" });
-    res.json({ success: true, token, user });
+    const token = jwt.sign(
+      { id: user._id, role: "citizen" },
+      "prototype_secret",
+      { expiresIn: "7d" }
+    );
+    res.json({
+      success: true,
+      message: "Login successful",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
+      token, // if you’re using JWT
+    });
   } catch (err) {
     console.error("Citizen Login Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
@@ -153,18 +188,38 @@ app.post("/auth/login-employee", async (req, res) => {
   try {
     const { email, phone, password, department } = req.body;
     if (!password || (!email && !phone) || !department)
-      return res.status(400).json({ success: false, message: "Provide email or phone, password and department" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Provide email or phone, password and department",
+        });
 
     const employee = await Employee.findOne({ $or: [{ email }, { phone }] });
-    if (!employee) return res.status(400).json({ success: false, message: "Employee not found" });
+    if (!employee)
+      return res
+        .status(400)
+        .json({ success: false, message: "Employee not found" });
 
-    if (department && employee.department.toLowerCase() !== department.toLowerCase())
-      return res.status(400).json({ success: false, message: "Invalid department" });
+    if (
+      department &&
+      employee.department.toLowerCase() !== department.toLowerCase()
+    )
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid department" });
 
     const isMatch = await bcrypt.compare(password, employee.password);
-    if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
+    if (!isMatch)
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: employee._id, role: "employee" }, "prototype_secret", { expiresIn: "7d" });
+    const token = jwt.sign(
+      { id: employee._id, role: "employee" },
+      "prototype_secret",
+      { expiresIn: "7d" }
+    );
     res.json({ success: true, token, employee });
   } catch (err) {
     console.error("Employee Login Error:", err);
@@ -175,15 +230,19 @@ app.post("/auth/login-employee", async (req, res) => {
 // ---------------- ISSUE ROUTES ----------------
 app.post("/issue", upload.single("image"), async (req, res) => {
   try {
-    const { description, location, citizenId, category } = req.body;
+    const { description, location, citizenName, category } = req.body;
 
     if (!req.file)
-      return res.status(400).json({ success: false, message: "Image is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Image is required" });
 
     // find citizen
-    const citizen = await User.findById(citizenId);
+    const citizen = await User.findById(citizenName);
     if (!citizen) {
-      return res.status(404).json({ success: false, message: "Citizen not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Citizen not found" });
     }
 
     const newIssue = new Issue({
@@ -203,9 +262,6 @@ app.post("/issue", upload.single("image"), async (req, res) => {
   }
 });
 
-
-
-
 // GET all issues
 app.get("/issue", async (req, res) => {
   try {
@@ -224,10 +280,16 @@ app.get("/issue", async (req, res) => {
 app.patch("/issue/:id/assign", async (req, res) => {
   try {
     const { employeeId } = req.body;
-    if (!employeeId) return res.status(400).json({ success: false, message: "employeeId is required" });
+    if (!employeeId)
+      return res
+        .status(400)
+        .json({ success: false, message: "employeeId is required" });
 
     const issue = await Issue.findById(req.params.id);
-    if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
+    if (!issue)
+      return res
+        .status(404)
+        .json({ success: false, message: "Issue not found" });
 
     issue.assigned = true;
     issue.assignedTo = employeeId;
