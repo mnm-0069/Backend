@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
 const issueSchema = new mongoose.Schema({
+  citizenName: { type: String, required: true }, // <-- store citizen's name
   citizenId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   description: String,
   location: String,

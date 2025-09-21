@@ -177,34 +177,28 @@ app.post("/auth/login-employee", async (req, res) => {
 // ---------------- ISSUE ROUTES ----------------
 app.post("/issue", upload.single("image"), async (req, res) => {
   try {
-    const { description, location, citizenId, category } = req.body;
-
-    // Validate required fields
-    if (!description || !location || !citizenId)
-      return res.status(400).json({ success: false, message: "Description, location and citizenId are required" });
+    const { description, location, citizenName, category } = req.body;
 
     if (!req.file)
       return res.status(400).json({ success: false, message: "Image is required" });
 
-    // Create new Issue document
     const newIssue = new Issue({
-      citizenId,
+      citizenName,   // <-- save name here
       description,
       location,
       category: category || "Other",
-      imageUrl: `/uploads/${req.file.filename}`, // store relative path
+      imageUrl: `/uploads/${req.file.filename}`,
     });
 
-    // Save to MongoDB
     await newIssue.save();
 
-    // Return success response
-    res.json({ success: true, message: "Issue reported successfully", issue: newIssue });
+    res.json({ success: true, message: "Issue reported", issue: newIssue });
   } catch (err) {
     console.error("Issue Report Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 
 // GET all issues
