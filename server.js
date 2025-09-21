@@ -53,12 +53,11 @@ const seedData = async () => {
     const citizenEmail = "citizen1@city.com";
     let citizen = await User.findOne({ email: citizenEmail });
     if (!citizen) {
-      const hashedPassword = await bcrypt.hash("123456", 10);
       citizen = new User({
         name: "John",
         email: citizenEmail,
         phone: "9876543210",
-        password: hashedPassword,
+        password: "123456",
         role: "citizen",
       });
       await citizen.save();
@@ -77,8 +76,7 @@ const seedData = async () => {
 
     const existingEmp = await Employee.findOne({ email: employeeData.email });
     if (!existingEmp) {
-      const hashedPassword = await bcrypt.hash(employeeData.password, 10);
-      const emp = new Employee({ ...employeeData, password: hashedPassword });
+      const emp = new Employee({ ...employeeData});
       await emp.save();
       console.log("👷 Default Employee created:", emp.name);
     }
