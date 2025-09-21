@@ -1,12 +1,13 @@
+// models/Employee.js
 const mongoose = require("mongoose");
 
-const employeeSchema = new mongoose.Schema({
+const EmployeeSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: false, unique: true, sparse: true },
-  phone: { type: String, required: false, unique: true, sparse: true },
+  email: { type: String, unique: true, sparse: true },   // optional
+  phone: { type: String, unique: true, sparse: true },   // optional
   password: { type: String, required: true },
-  department: { type: String, required: true },
-  role: { type: String, default: "employee" }
+  department: { type: String, default: "general" },
+  role: { type: String, required: true , default : "employee"},
 });
 
-module.exports = mongoose.model("Employee", employeeSchema);
+module.exports = mongoose.model("Employee", EmployeeSchema);
