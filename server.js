@@ -91,51 +91,54 @@ app.get("/", (req, res) => {
   res.json({ message: "CITYSYNC BACKEND SERVER RUNNING" });
 });
 
+//---------REGISTERING-------------------
 app.post("/auth/register", async (req, res) => {
   try {
     const { name, email, phone, password, role, department } = req.body;
 
-    // Validation
-    if (!name || !password || !role || (!email && !phone)) {
+    // ✅ Validation
+    if (!name || !email || !phone || !password || !role) {
       return res.status(400).json({
         success: false,
-        message: "Name, password, role and either phone or email are required",
+        message: "Name, email, phone, password, and role are required",
       });
     }
 
-    // Check for duplicates
-    const query = [];
-    if (email) query.push({ email: email.toLowerCase().trim() });
-    if (phone) query.push({ phone: phone.trim() });
-
-    let existingUser = null;
+    // ✅ Check for duplicates
+    let existingUser;
     if (role === "citizen") {
-      existingUser = await User.findOne({ $or: query });
+      existingUser = await User.findOne({
+        $or: [{ email: email.toLowerCase().trim() }, { phone: phone.trim() }],
+      });
     } else if (role === "employee") {
-      existingUser = await Employee.findOne({ $or: query });
+      existingUser = await Employee.findOne({
+        $or: [{ email: email.toLowerCase().trim() }, { phone: phone.trim() }],
+      });
     }
 
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: "Phone or Email already registered",
+        message: "Email or Phone already registered",
       });
     }
 
-    // Hash password
+    // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Prepare userData
+    // ✅ Prepare userData
     const userData = {
       name,
+      email: email.toLowerCase().trim(),
+      phone: phone.trim(),
       password: hashedPassword,
       role,
     };
-    if (email) userData.email = email.toLowerCase().trim();
-    if (phone) userData.phone = phone.trim();
-    if (role === "employee") userData.department = department || "general";
+    if (role === "employee") {
+      userData.department = department || "general";
+    }
 
-    // Create user
+    // ✅ Create user
     let newUser;
     if (role === "citizen") {
       newUser = await User.create(userData);
@@ -146,23 +149,28 @@ app.post("/auth/register", async (req, res) => {
     res.status(201).json({
       success: true,
       message: `${role} registered successfully`,
-      user: newUser,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        role: newUser.role,
+      },
     });
   } catch (err) {
     console.error("Register Error:", err);
 
-    // Duplicate key error handling
+    // ✅ Duplicate key error handling
     if (err.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: "Phone or Email already registered",
+        message: "Email or Phone already registered",
       });
     }
 
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
 
 
 
