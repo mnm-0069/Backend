@@ -91,36 +91,28 @@ app.get("/", (req, res) => {
   res.json({ message: "CITYSYNC BACKEND SERVER RUNNING" });
 });
 
-//---------------- AUTH REGISTER ROUTES ----------------
 app.post("/auth/register", async (req, res) => {
   try {
     const { name, email, phone, password, role, department } = req.body;
 
-    // ✅ Basic validation
-    if (!name || !password || !role) {
+    // Validation
+    if (!name || !password || !role || (!email && !phone)) {
       return res.status(400).json({
         success: false,
-        message: "Name, password and role are required",
+        message: "Name, password, role and either phone or email are required",
       });
     }
 
-    if (!phone && !email) {
-      return res.status(400).json({
-        success: false,
-        message: "Either phone or email is required",
-      });
-    }
-
-    // ✅ Build OR query dynamically for duplicate check
-    const orQuery = [];
-    if (phone) orQuery.push({ phone });
-    if (email) orQuery.push({ email });
+    // Check for duplicates
+    const query = [];
+    if (email) query.push({ email: email.toLowerCase().trim() });
+    if (phone) query.push({ phone: phone.trim() });
 
     let existingUser = null;
     if (role === "citizen") {
-      if (orQuery.length) existingUser = await User.findOne({ $or: orQuery });
+      existingUser = await User.findOne({ $or: query });
     } else if (role === "employee") {
-      if (orQuery.length) existingUser = await Employee.findOne({ $or: orQuery });
+      existingUser = await Employee.findOne({ $or: query });
     }
 
     if (existingUser) {
@@ -130,16 +122,20 @@ app.post("/auth/register", async (req, res) => {
       });
     }
 
-    // ✅ Hash password
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Prepare userData
-    const userData = { name, password: hashedPassword, role };
-    if (phone) userData.phone = phone;
-    if (email) userData.email = email;
+    // Prepare userData
+    const userData = {
+      name,
+      password: hashedPassword,
+      role,
+    };
+    if (email) userData.email = email.toLowerCase().trim();
+    if (phone) userData.phone = phone.trim();
     if (role === "employee") userData.department = department || "general";
 
-    // ✅ Save user
+    // Create user
     let newUser;
     if (role === "citizen") {
       newUser = await User.create(userData);
@@ -155,7 +151,7 @@ app.post("/auth/register", async (req, res) => {
   } catch (err) {
     console.error("Register Error:", err);
 
-    // Handle unique index error
+    // Duplicate key error handling
     if (err.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -166,7 +162,6 @@ app.post("/auth/register", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
 
 
 
