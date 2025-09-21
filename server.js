@@ -94,7 +94,7 @@ app.get("/", (req, res) => {
 //---------------- AUTH REGISTER ROUTES ----------------
 app.post("/auth/register", async (req, res) => {
   try {
-    const { name, phone ,email, password, role, department } = req.body;
+    const { name, email, phone, password, role, department } = req.body;
 
     // ✅ Validation
     if (!name || (!phone && !email) || !password || !role) {
@@ -104,16 +104,22 @@ app.post("/auth/register", async (req, res) => {
       });
     }
 
-    // ✅ Build dynamic query for duplicate check
-    const query = {};
-    if (phone) query.phone = phone;
-    if (email) query.email = email;
-
+    // ✅ Build query to check duplicates
     let existingUser;
     if (role === "citizen") {
-      existingUser = await User.findOne(query);
+      existingUser = await User.findOne({
+        $or: [
+          ...(phone ? [{ phone }] : []),
+          ...(email ? [{ email }] : []),
+        ],
+      });
     } else if (role === "employee") {
-      existingUser = await Employee.findOne(query);
+      existingUser = await Employee.findOne({
+        $or: [
+          ...(phone ? [{ phone }] : []),
+          ...(email ? [{ email }] : []),
+        ],
+      });
     }
 
     if (existingUser) {
@@ -126,20 +132,17 @@ app.post("/auth/register", async (req, res) => {
     // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Prepare user data
+    // ✅ Build userData dynamically (no nulls)
     const userData = {
       name,
-      email: email || null,
-      phone: phone || null,
       password: hashedPassword,
       role,
     };
+    if (phone) userData.phone = phone;
+    if (email) userData.email = email;
+    if (role === "employee") userData.department = department || "general";
 
-    if (role === "employee") {
-      userData.department = department || "general";
-    }
-
-    // ✅ Save to correct collection
+    // ✅ Save user
     let newUser;
     if (role === "citizen") {
       newUser = await User.create(userData);
@@ -155,7 +158,6 @@ app.post("/auth/register", async (req, res) => {
   } catch (err) {
     console.error("Register Error:", err);
 
-    // Handle duplicate key error cleanly
     if (err.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -166,6 +168,7 @@ app.post("/auth/register", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 
 //--------------------CITIZEN LOGIN-------------------
