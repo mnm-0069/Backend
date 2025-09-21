@@ -187,12 +187,14 @@ app.post("/auth/login-citizen", async (req, res) => {
       });
     }
 
+    // ✅ Build dynamic query
+    const query = [];
+    if (email) query.push({ email: email.toLowerCase().trim() });
+    if (phone) query.push({ phone: phone.trim() });
+
     // ✅ Find user by email or phone
     const user = await User.findOne({
-      $or: [
-        { email: email ? email.toLowerCase().trim() : null },
-        { phone: phone ? phone.trim() : null },
-      ],
+      $or: query,
       role: "citizen",
     });
 
@@ -228,6 +230,7 @@ app.post("/auth/login-citizen", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 
 

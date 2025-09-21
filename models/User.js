@@ -13,7 +13,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     unique: true,
     sparse: true,       // allows multiple docs with null phone
-    trim: true,
+    
   },
   password: { type: String, required: true },
   role: { type: String, required: true, default: "citizen" },
