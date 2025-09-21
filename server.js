@@ -94,7 +94,7 @@ app.get("/", (req, res) => {
 //---------------- AUTH REGISTER ROUTES ----------------
 app.post("/auth/register", async (req, res) => {
   try {
-    const { name, email, phone, password, role, department } = req.body;
+    const { name, phone ,email, password, role, department } = req.body;
 
     // ✅ Validation
     if (!name || (!phone && !email) || !password || !role) {
