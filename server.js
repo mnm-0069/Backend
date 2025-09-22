@@ -342,9 +342,9 @@ app.get("/issue", async (req, res) => {
 });
 
 // GET specific issue by ID
-router.get("/issue/:id", async (req, res) => {
+router.get("/issue/:_id", async (req, res) => {
   try {
-    const issue = await Issue.findById(req.params.id);
+    const issue = await Issue.findById(req.params._id);
     if (!issue) {
       return res.status(404).json({ message: "Issue not found" });
     }
