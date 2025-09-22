@@ -341,6 +341,20 @@ app.get("/issue", async (req, res) => {
   }
 });
 
+// GET specific issue by ID
+router.get("/issue/:id", async (req, res) => {
+  try {
+    const issue = await Issue.findById(req.params.id);
+    if (!issue) {
+      return res.status(404).json({ message: "Issue not found" });
+    }
+    res.json(issue);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // Assign issue to employee
 app.patch("/employee/:employeeId/assign-issue/:issueId", async (req, res) => {
   try {
@@ -409,6 +423,7 @@ app.get("/employee/:employeeId/assigned-issues", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 
 // ===== Start server =====
